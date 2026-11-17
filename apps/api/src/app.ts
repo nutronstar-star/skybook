@@ -13,11 +13,18 @@ import { persistIdempotencyResponse } from './shared/middleware/idempotency.midd
 import { redis, isRedisReady } from './shared/redis/client.js';
 import { auditRoutes } from './modules/audit/index.js';
 import { identityRoutes } from './modules/identity/index.js';
-import { flightRoutes } from './modules/flight/index.js';
+import { flightRoutes, flightService } from './modules/flight/index.js';
 import { bookingRoutes } from './modules/booking/index.js';
-import { paymentRoutes } from './modules/payment/index.js';
+import { paymentRoutes, paymentService } from './modules/payment/index.js';
+import { ticketRoutes, ticketService } from './modules/ticket/index.js';
+import { refundRoutes, refundService } from './modules/refund/index.js';
+import { notificationService } from './modules/notification/index.js';
 import { SeatWebSocketGateway } from './ws/index.js';
-import { WebhookWorkerManager } from './workers/index.js';
+import {
+  EmailWorkerManager,
+  MaintenanceWorker,
+  WebhookWorkerManager
+} from './workers/index.js';
 
 export interface BuildAppOptions {
   enableWebSockets?: boolean;
@@ -25,7 +32,43 @@ export interface BuildAppOptions {
   enableWorkers?: boolean;
 }
 
+let domainHooksWired = false;
+
+function ensureDomainHooksWired(): void {
+  if (domainHooksWired) return;
+  domainHooksWired = true;
+
+  // 1. When payment settles via webhook -> issue Ed25519 QR tickets + enqueue ticket email
+  paymentService.onPaymentSucceeded(async (ctx, tx) => {
+    const tickets = await ticketService.issueTicketsForBooking(ctx.bookingId, tx);
+    const booking = await tx.booking.findUnique({
+      where: { id: ctx.bookingId },
+      select: { pnr: true }
+    });
+    if (booking) {
+      await notificationService.enqueueTicketIssued({
+        bookingId: ctx.bookingId,
+        userId: ctx.userId,
+        pnr: booking.pnr,
+        ticketCount: tickets.length
+      });
+    }
+  });
+
+  // 2. When Razorpay refund webhook settles -> update Refund status & notify passenger
+  paymentService.onRefundProcessed(async (ctx, tx) => {
+    await refundService.handleGatewayRefundWebhook(ctx.razorpayRefundId, ctx.status, tx);
+  });
+
+  // 3. When Admin cancels a flight -> automatically initiate 100% refunds for all bookings
+  flightService.onFlightCancelled(async (event) => {
+    await refundService.handleFlightCancelledCascade(event);
+  });
+}
+
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
+  ensureDomainHooksWired();
+
   const app = Fastify({
     logger: logger as unknown as FastifyBaseLogger,
     genReqId: (req) => {
@@ -127,26 +170,28 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     }
   );
 
-  // Module 1: Identity & Auth Routes
+  // Register all 8 Domain Modules
   await app.register(identityRoutes, { prefix: '/v1' });
-
-  // Module 2: Flight Search & Admin Catalog Routes
   await app.register(flightRoutes, { prefix: '/v1' });
-
-  // Module 3: Seat Locks & Booking Routes
   await app.register(bookingRoutes, { prefix: '/v1' });
-
-  // Module 4: Payments & Razorpay Webhooks
   await app.register(paymentRoutes, { prefix: '/v1' });
-
-  // Module 8: Audit Routes
+  await app.register(ticketRoutes, { prefix: '/v1' });
+  await app.register(refundRoutes, { prefix: '/v1' });
   await app.register(auditRoutes, { prefix: '/v1/admin' });
 
-  // BullMQ Workers (webhook-worker)
+  // BullMQ Workers + Periodic Maintenance Sweeper
   if (options.enableWorkers !== false) {
     const webhookWorkers = new WebhookWorkerManager();
+    const emailWorkers = new EmailWorkerManager();
+    const maintenanceWorker = new MaintenanceWorker();
+
     webhookWorkers.start();
+    emailWorkers.start();
+    maintenanceWorker.start();
+
     app.addHook('onClose', async () => {
+      maintenanceWorker.close();
+      await emailWorkers.close();
       await webhookWorkers.close();
     });
   }

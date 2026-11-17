@@ -16,5 +16,5 @@
 | Wave 3 | 3A | `booking` module — Redis `SET NX` (300s) + PG unique seat lock, atomic booking tx, AES-256-GCM PII, Admin masked/unmasked views | `FR-PAX-012..024`, `FR-ADM-011..015`, `NFR-P-03..04` | DONE |
 | Wave 3 | 3B | WebSocket Gateway (`ws`) — RFC 6455 JWT auth + Redis Pub/Sub real-time seat updates | `FR-PAX-017`, `EI-07` | DONE |
 | Wave 4 | 4A | `payment` module + BullMQ `webhook-worker` — Idempotent Razorpay orders, HMAC-SHA256 webhook, `MOCK_PAYMENT` | `FR-PAX-025..030`, `FR-XC-004`, `NFR-P-05` | DONE |
-| Wave 4 | 4B | `ticket`, `refund`, `notification` modules + Workers — Ed25519 QR, deterministic refund tiers, Admin refund approval, SMTP worker | `FR-PAX-031..039`, `FR-ADM-016..019` | NEXT |
-| Wave 5 | 5A | Vitest Suite — Unit, Contract, 10-req Concurrency (`1x201 + 9x409`), Webhook Idempotency, Audit Immutability (`>= 80%` coverage) | `SC-01..12`, `NFR-M-01` | PENDING |
+| Wave 4 | 4B | `ticket`, `refund`, `notification` modules + Workers — Ed25519 QR, deterministic refund tiers, Admin refund approval, SMTP worker | `FR-PAX-031..039`, `FR-ADM-016..019` | DONE |
+| Wave 5 | 5A | Vitest Suite — Unit, Contract, 10-req Concurrency (`1x201 + 9x409`), Webhook Idempotency, Audit Immutability (`>= 80%` coverage) | `SC-01..12`, `NFR-M-01` | NEXT |

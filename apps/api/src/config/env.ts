@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const stripQuotes = (v: string) => v.replace(/^["']+|["']+$/g, '').trim();
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -14,8 +16,8 @@ const EnvSchema = z.object({
 
   PII_ENCRYPTION_KEY_HEX: z.string().length(64),
 
-  TICKET_ED25519_PRIVATE_KEY_B64: z.string().default(''),
-  TICKET_ED25519_PUBLIC_KEY_B64: z.string().default(''),
+  TICKET_ED25519_PRIVATE_KEY_B64: z.string().default('').transform(stripQuotes),
+  TICKET_ED25519_PUBLIC_KEY_B64: z.string().default('').transform(stripQuotes),
 
   MOCK_OTP: z
     .string()
