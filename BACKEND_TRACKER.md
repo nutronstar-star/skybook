@@ -10,8 +10,8 @@
 | :--- | :--- | :--- | :--- | :--- |
 | Wave 1 | 1A | Monorepo, Git remote, Docker (PG16 + Redis7), `@skybook/shared` | `CON-T-01..08`, `NFR-M-02`, `FR-PAX-031` | DONE |
 | Wave 1 | 1B | `@skybook/database` — 21 tables, partial unique seat constraints, append-only `audit_logs` SQL trigger, seed data | `BR-01..10`, `NFR-S-07`, `NFR-D-01..05` | DONE |
-| Wave 1 | 1C | `@skybook/api` Core — Fastify 4, Pino PII scrubber, Redis rate-limit, RBAC + 404 tenant guard, `Idempotency-Key`, `audit` module | `FR-XC-001..008`, `FR-ADM-020..022`, `NFR-S-03..15` | NEXT |
-| Wave 2 | 2A | `identity` module — Phone/Email OTP, Admin Argon2id login + reset, session revocation cascade | `FR-PAX-001..005`, `FR-PAX-040..042`, `FR-ADM-001..003` | PENDING |
+| Wave 1 | 1C | `@skybook/api` Core — Fastify 4, Pino PII scrubber, Redis rate-limit, RBAC + 404 tenant guard, `Idempotency-Key`, `audit` module | `FR-XC-001..008`, `FR-ADM-020..022`, `NFR-S-03..15` | DONE |
+| Wave 2 | 2A | `identity` module — Phone/Email OTP, Admin Argon2id login + reset, session revocation cascade | `FR-PAX-001..005`, `FR-PAX-040..042`, `FR-ADM-001..003` | IN PROGRESS |
 | Wave 2 | 2B | `flight` module — Cities/airports autocomplete, aircraft layouts, flight lifecycle, Redis-cached search | `FR-PAX-006..011`, `FR-ADM-004..010`, `NFR-P-02` | PENDING |
 | Wave 3 | 3A | `booking` module — Redis `SET NX` (300s) + PG unique seat lock, atomic booking tx, AES-256-GCM PII, Admin masked/unmasked views | `FR-PAX-012..024`, `FR-ADM-011..015`, `NFR-P-03..04` | PENDING |
 | Wave 3 | 3B | WebSocket Gateway (`ws`) — RFC 6455 JWT auth + Redis Pub/Sub real-time seat updates | `FR-PAX-017`, `EI-07` | PENDING |
