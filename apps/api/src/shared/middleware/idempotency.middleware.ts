@@ -18,7 +18,7 @@ declare module 'fastify' {
 export async function requireIdempotencyKey(
   request: FastifyRequest,
   reply: FastifyReply
-): Promise<void> {
+): Promise<FastifyReply | void> {
   const rawKey = request.headers['idempotency-key'];
   const key = Array.isArray(rawKey) ? rawKey[0]?.trim() : rawKey?.trim();
 
@@ -56,8 +56,7 @@ export async function requireIdempotencyKey(
     }
 
     void reply.header('X-Idempotent-Replay', 'true');
-    void reply.status(existing.responseStatus).send(existing.responseBody);
-    return reply;
+    return reply.status(existing.responseStatus).send(existing.responseBody);
   }
 
   request.idempotencyContext = {

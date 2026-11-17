@@ -15,11 +15,14 @@ import { auditRoutes } from './modules/audit/index.js';
 import { identityRoutes } from './modules/identity/index.js';
 import { flightRoutes } from './modules/flight/index.js';
 import { bookingRoutes } from './modules/booking/index.js';
+import { paymentRoutes } from './modules/payment/index.js';
 import { SeatWebSocketGateway } from './ws/index.js';
+import { WebhookWorkerManager } from './workers/index.js';
 
 export interface BuildAppOptions {
   enableWebSockets?: boolean;
   wsHandshakeTimeoutMs?: number;
+  enableWorkers?: boolean;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -133,8 +136,20 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   // Module 3: Seat Locks & Booking Routes
   await app.register(bookingRoutes, { prefix: '/v1' });
 
+  // Module 4: Payments & Razorpay Webhooks
+  await app.register(paymentRoutes, { prefix: '/v1' });
+
   // Module 8: Audit Routes
   await app.register(auditRoutes, { prefix: '/v1/admin' });
+
+  // BullMQ Workers (webhook-worker)
+  if (options.enableWorkers !== false) {
+    const webhookWorkers = new WebhookWorkerManager();
+    webhookWorkers.start();
+    app.addHook('onClose', async () => {
+      await webhookWorkers.close();
+    });
+  }
 
   // RFC 6455 WebSocket Gateway for Real-Time Seat Updates (FR-PAX-017, EI-07)
   if (options.enableWebSockets !== false) {
