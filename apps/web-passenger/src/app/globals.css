@@ -1,0 +1,246 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+  --ease-instant: 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* LIGHT THEME: Airport Concourse Clarity */
+[data-theme="light"] {
+  --canvas-bg: #F3F6FA;
+  --canvas-subtle: #E9EFF7;
+  --surface-card: #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --surface-hover: #F1F5F9;
+  --surface-active: #E2E8F0;
+  --surface-sunken: #E4ECF5;
+
+  --text-bright: #091124;
+  --text-primary: #1E293B;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-inverse: #F8FAFC;
+  --text-brand: #0284C7;
+
+  --border-hairline: rgba(11, 25, 56, 0.08);
+  --border-subtle: rgba(11, 25, 56, 0.14);
+  --border-strong: rgba(11, 25, 56, 0.24);
+  --border-focus: #0284C7;
+
+  --brand-primary: #0284C7;
+  --brand-primary-hover: #0369A1;
+  --brand-primary-active: #075985;
+  --brand-primary-subtle: rgba(2, 132, 199, 0.09);
+  --brand-primary-border: rgba(2, 132, 199, 0.28);
+
+  --telemetry-cyan: #06B6D4;
+  --telemetry-cyan-subtle: rgba(6, 182, 212, 0.12);
+  --signal-emerald: #059669;
+  --signal-emerald-subtle: rgba(5, 150, 105, 0.12);
+  --warning-amber: #D97706;
+  --warning-amber-subtle: rgba(217, 119, 6, 0.12);
+  --danger-crimson: #DC2626;
+  --danger-crimson-subtle: rgba(220, 38, 38, 0.12);
+
+  --seat-available-bg: rgba(5, 150, 105, 0.12);
+  --seat-available-border: #059669;
+  --seat-available-text: #047857;
+  --seat-selected-bg: #0284C7;
+  --seat-selected-border: #0369A1;
+  --seat-selected-text: #FFFFFF;
+  --seat-locked-bg: rgba(217, 119, 6, 0.15);
+  --seat-locked-border: #D97706;
+  --seat-locked-text: #B45309;
+  --seat-booked-bg: #E2E8F0;
+  --seat-booked-border: #CBD5E1;
+  --seat-booked-text: #94A3B8;
+  --seat-extra-bg: rgba(124, 58, 237, 0.12);
+  --seat-extra-border: #7C3AED;
+  --seat-extra-text: #6D28D9;
+
+  --shadow-ambient: 0 4px 18px -2px rgba(11, 25, 56, 0.06);
+  --shadow-floating: 0 16px 36px -8px rgba(11, 25, 56, 0.12), 0 0 0 1px rgba(11, 25, 56, 0.05);
+  --shadow-modal: 0 24px 64px -12px rgba(11, 25, 56, 0.2), 0 0 0 1px rgba(11, 25, 56, 0.08);
+  --shadow-glow-primary: 0 0 20px rgba(2, 132, 199, 0.28);
+
+  --logo-navy: #0B1938;
+  --logo-sky: #0284C7;
+}
+
+/* DARK THEME (DEFAULT): OLED Night Flight Cabin */
+[data-theme="dark"] {
+  --canvas-bg: #050914;
+  --canvas-subtle: #0A101F;
+  --surface-card: #0B1221;
+  --surface-elevated: #111B30;
+  --surface-hover: #172540;
+  --surface-active: #1E3052;
+  --surface-sunken: #070C18;
+
+  --text-bright: #FFFFFF;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-inverse: #050914;
+  --text-brand: #38BDF8;
+
+  --border-hairline: rgba(255, 255, 255, 0.07);
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.24);
+  --border-focus: #38BDF8;
+
+  --brand-primary: #38BDF8;
+  --brand-primary-hover: #7DD3FC;
+  --brand-primary-active: #0284C7;
+  --brand-primary-subtle: rgba(56, 189, 248, 0.14);
+  --brand-primary-border: rgba(56, 189, 248, 0.35);
+
+  --telemetry-cyan: #22D3EE;
+  --telemetry-cyan-subtle: rgba(34, 211, 238, 0.14);
+  --signal-emerald: #10B981;
+  --signal-emerald-subtle: rgba(16, 185, 129, 0.14);
+  --warning-amber: #F59E0B;
+  --warning-amber-subtle: rgba(245, 158, 11, 0.14);
+  --danger-crimson: #EF4444;
+  --danger-crimson-subtle: rgba(239, 68, 68, 0.14);
+
+  --seat-available-bg: rgba(16, 185, 129, 0.14);
+  --seat-available-border: rgba(16, 185, 129, 0.45);
+  --seat-available-text: #34D399;
+  --seat-selected-bg: #38BDF8;
+  --seat-selected-border: #7DD3FC;
+  --seat-selected-text: #050914;
+  --seat-locked-bg: rgba(245, 158, 11, 0.15);
+  --seat-locked-border: rgba(245, 158, 11, 0.55);
+  --seat-locked-text: #FBBF24;
+  --seat-booked-bg: #131D30;
+  --seat-booked-border: rgba(255, 255, 255, 0.06);
+  --seat-booked-text: #475569;
+  --seat-extra-bg: rgba(167, 139, 250, 0.15);
+  --seat-extra-border: rgba(167, 139, 250, 0.5);
+  --seat-extra-text: #C4B5FD;
+
+  --shadow-ambient: 0 8px 24px -4px rgba(0, 0, 0, 0.55);
+  --shadow-floating: 0 16px 48px -8px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-modal: 0 28px 72px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-glow-primary: 0 0 24px rgba(56, 189, 248, 0.35);
+
+  --logo-navy: #F1F5F9;
+  --logo-sky: #38BDF8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--canvas-bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  transition: background-color var(--ease-smooth), color var(--ease-smooth);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cabin Seat Matrix Styling (brand.html Section 05) */
+.sb-seat {
+  position: relative;
+  border-radius: 9px 9px 6px 6px;
+  border: 1.5px solid transparent;
+  transition: all var(--ease-instant);
+  user-select: none;
+}
+
+.sb-seat::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 12%;
+  width: 76%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="dark"] .sb-seat::after {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.sb-seat-avail {
+  background: var(--seat-available-bg);
+  border-color: var(--seat-available-border);
+  color: var(--seat-available-text);
+}
+.sb-seat-avail:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--seat-available-bg);
+}
+
+.sb-seat-extra {
+  background: var(--seat-extra-bg);
+  border-color: var(--seat-extra-border);
+  color: var(--seat-extra-text);
+}
+.sb-seat-extra:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--seat-extra-bg);
+}
+
+.sb-seat-sel {
+  background: var(--seat-selected-bg);
+  border-color: var(--seat-selected-border);
+  color: var(--seat-selected-text);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.sb-seat-lock {
+  background: var(--seat-locked-bg);
+  border-color: var(--seat-locked-border);
+  color: var(--seat-locked-text);
+  animation: lockedBreath 2.2s infinite ease-in-out;
+  cursor: not-allowed;
+}
+
+.sb-seat-book {
+  background: var(--seat-booked-bg);
+  border-color: var(--seat-booked-border);
+  color: var(--seat-booked-text);
+  cursor: not-allowed;
+}
+
+@keyframes lockedBreath {
+  0%, 100% { opacity: 0.62; }
+  50% { opacity: 1; filter: brightness(1.18); }
+}
+
+@keyframes beaconPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.sb-live-dot {
+  animation: beaconPulse 1.3s infinite ease-in-out;
+}
+
+/* Notched Boarding Pass Cutouts (brand.html Section 07) */
+.sb-ticket-notch-left,
+.sb-ticket-notch-right {
+  position: absolute;
+  bottom: -15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--canvas-bg);
+  border: 1px solid var(--border-strong);
+  z-index: 10;
+}
+.sb-ticket-notch-left { left: -16px; }
+.sb-ticket-notch-right { right: -16px; }
