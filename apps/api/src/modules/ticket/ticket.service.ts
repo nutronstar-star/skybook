@@ -1,5 +1,5 @@
 import {
-  createPrivateKey,
+  createPrivateKey, createPublicKey,
   generateKeyPairSync,
   randomBytes,
   randomUUID,
@@ -32,7 +32,7 @@ function loadOrGenerateEd25519Keys(): Ed25519KeyRing {
     const privateKey = createPrivateKey({ key: privDer, format: 'der', type: 'pkcs8' });
     return {
       privateKey,
-      publicKeySpkiBase64: env.TICKET_ED25519_PUBLIC_KEY_B64
+      publicKeySpkiBase64: Buffer.from(createPublicKey(privateKey).export({ format: 'der', type: 'spki' })).toString('base64')
     };
   }
 

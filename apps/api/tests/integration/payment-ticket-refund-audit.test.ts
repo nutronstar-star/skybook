@@ -184,9 +184,10 @@ describe('Integration · E2E Booking, Idempotent Payment, Ed25519 QR, Refund, WS
 
     // Offline & Online Ed25519 verification (SC-03, P4)
     const pubKeyRes = await app.inject({ method: 'GET', url: '/v1/tickets/public-key' });
+    expect(pubKeyRes.statusCode).toBe(200);
     const { publicKey } = pubKeyRes.json<{ publicKey: string }>();
     const offline = verifyTicketQrToken(qrToken, publicKey);
-    expect(offline.valid).toBe(true);
+    expect(offline).toMatchObject({ valid: true });
     expect(offline.payload?.passengerName).toBe('Ananya Verma');
 
     // 5. Refund preview + Passenger cancellation + QR invalidation (FR-PAX-035..039)
