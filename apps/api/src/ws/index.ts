@@ -1,0 +1,1 @@
+export { SeatWebSocketGateway } from './seat-ws.gateway.js';

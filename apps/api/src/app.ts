@@ -15,8 +15,14 @@ import { auditRoutes } from './modules/audit/index.js';
 import { identityRoutes } from './modules/identity/index.js';
 import { flightRoutes } from './modules/flight/index.js';
 import { bookingRoutes } from './modules/booking/index.js';
+import { SeatWebSocketGateway } from './ws/index.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export interface BuildAppOptions {
+  enableWebSockets?: boolean;
+  wsHandshakeTimeoutMs?: number;
+}
+
+export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: logger as unknown as FastifyBaseLogger,
     genReqId: (req) => {
@@ -129,6 +135,15 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Module 8: Audit Routes
   await app.register(auditRoutes, { prefix: '/v1/admin' });
+
+  // RFC 6455 WebSocket Gateway for Real-Time Seat Updates (FR-PAX-017, EI-07)
+  if (options.enableWebSockets !== false) {
+    const wsGateway = new SeatWebSocketGateway(options.wsHandshakeTimeoutMs);
+    wsGateway.attach(app.server);
+    app.addHook('onClose', async () => {
+      await wsGateway.close();
+    });
+  }
 
   return app;
 }

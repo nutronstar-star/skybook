@@ -5,7 +5,7 @@ import { redis } from './shared/redis/client.js';
 import { logger } from './shared/logger/pii-scrubber.js';
 
 async function start(): Promise<void> {
-  const app = await buildApp();
+  const app = await buildApp({ enableWebSockets: true });
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutting down SkyBook API gracefully...');
@@ -19,7 +19,7 @@ async function start(): Promise<void> {
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
   await app.listen({ port: env.PORT, host: env.HOST });
-  logger.info(`SkyBook API listening on http://${env.HOST}:${env.PORT} (OpenAPI: /docs)`);
+  logger.info(`SkyBook API listening on http://${env.HOST}:${env.PORT} (WS: /v1/ws/seats, Docs: /docs)`);
 }
 
 start().catch((err) => {
