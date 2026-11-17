@@ -1,0 +1,529 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto, pg_trgm]
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  PASSENGER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum GovtIdType {
+  AADHAAR
+  PASSPORT
+  PAN
+  DRIVING_LICENSE
+}
+
+enum CabinClass {
+  ECONOMY
+  BUSINESS
+}
+
+enum FlightStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
+}
+
+enum SeatLockStatus {
+  LOCKED
+  CONVERTED
+  EXPIRED
+  RELEASED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum BookingPassengerStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum TicketStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum WebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+}
+
+enum RefundStatus {
+  INITIATED
+  PROCESSING
+  COMPLETED
+  FAILED
+  REJECTED
+}
+
+enum AuditActorRole {
+  PASSENGER
+  ADMIN
+  SYSTEM
+}
+
+// ============================================================================
+// 1. IDENTITY DOMAIN (6 Tables)
+// ============================================================================
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  role      UserRole
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  passengerProfile PassengerProfile?
+  adminProfile     AdminProfile?
+  sessions         Session[]
+  seatLocks        SeatLock[]
+  bookings         Booking[]
+  paymentIntents   PaymentIntent[]
+  idempotencyKeys  IdempotencyKey[]
+  initiatedRefunds Refund[]          @relation("RefundInitiator")
+  approvedRefunds  Refund[]          @relation("RefundApprover")
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model PassengerProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  // Encrypted with AES-256-GCM (NFR-S-03) + HMAC blind index for lookup
+  phoneEncrypted    String   @map("phone_encrypted")
+  phoneHash         String   @unique @map("phone_hash")
+  phoneLast4        String   @map("phone_last4") @db.VarChar(4)
+  emailEncrypted    String?  @map("email_encrypted")
+  emailHash         String?  @unique @map("email_hash")
+  emailDomain       String?  @map("email_domain")
+  fullNameEncrypted String?  @map("full_name_encrypted")
+  consentGivenAt    DateTime @default(now()) @map("consent_given_at") @db.Timestamptz(6)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("passenger_profiles")
+}
+
+model AdminProfile {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @map("user_id") @db.Uuid
+  email        String   @unique
+  fullName     String   @map("full_name")
+  // Argon2id hash: 64MB memory, 3 iterations, 4 parallelism (NFR-S-01)
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passwordResets PasswordReset[]
+
+  @@map("admin_profiles")
+}
+
+model OtpChallenge {
+  id          String    @id @default(uuid()) @db.Uuid
+  channel     String    @db.VarChar(16) // PHONE | EMAIL
+  targetHash  String    @map("target_hash")
+  otpHash     String    @map("otp_hash")
+  attempts    Int       @default(0)
+  lockedUntil DateTime? @map("locked_until") @db.Timestamptz(6)
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([targetHash, createdAt])
+  @@index([expiresAt])
+  @@map("otp_challenges")
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  userAgent        String?   @map("user_agent")
+  ipAddress        String?   @map("ip_address")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("sessions")
+}
+
+model PasswordReset {
+  id             String    @id @default(uuid()) @db.Uuid
+  adminProfileId String    @map("admin_profile_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash")
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt         DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  adminProfile AdminProfile @relation(fields: [adminProfileId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+// ============================================================================
+// 2. FLIGHT DOMAIN (6 Tables)
+// ============================================================================
+
+model City {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  state     String
+  country   String   @default("India")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  airports Airport[]
+
+  @@map("cities")
+}
+
+model Airport {
+  id        String   @id @default(uuid()) @db.Uuid
+  cityId    String   @map("city_id") @db.Uuid
+  iataCode  String   @unique @map("iata_code") @db.VarChar(3)
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  city             City     @relation(fields: [cityId], references: [id])
+  departingFlights Flight[] @relation("OriginAirport")
+  arrivingFlights  Flight[] @relation("DestinationAirport")
+
+  @@map("airports")
+}
+
+model AircraftType {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique // e.g., A320NEO, B737-800
+  name          String
+  totalSeats    Int      @map("total_seats")
+  businessSeats Int      @map("business_seats")
+  economySeats  Int      @map("economy_seats")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  seatLayouts SeatLayout[]
+  flights     Flight[]
+
+  @@map("aircraft_types")
+}
+
+model SeatLayout {
+  id             String     @id @default(uuid()) @db.Uuid
+  aircraftTypeId String     @map("aircraft_type_id") @db.Uuid
+  seatNumber     String     @map("seat_number") @db.VarChar(5) // e.g., 1A, 14F
+  rowNumber      Int        @map("row_number")
+  columnLetter   String     @map("column_letter") @db.VarChar(2)
+  cabinClass     CabinClass @map("cabin_class")
+  isExitRow      Boolean    @default(false) @map("is_exit_row")
+  isWindow       Boolean    @default(false) @map("is_window")
+
+  aircraftType AircraftType @relation(fields: [aircraftTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([aircraftTypeId, seatNumber])
+  @@map("seat_layouts")
+}
+
+model Flight {
+  id                   String       @id @default(uuid()) @db.Uuid
+  flightNumber         String       @map("flight_number") @db.VarChar(12)
+  airlineName          String       @default("SkyBook Air") @map("airline_name")
+  originAirportId      String       @map("origin_airport_id") @db.Uuid
+  destinationAirportId String       @map("destination_airport_id") @db.Uuid
+  aircraftTypeId       String       @map("aircraft_type_id") @db.Uuid
+  departureTime        DateTime     @map("departure_time") @db.Timestamptz(6)
+  arrivalTime          DateTime     @map("arrival_time") @db.Timestamptz(6)
+  durationMinutes      Int          @map("duration_minutes")
+  economyBasePaise     Int          @map("economy_base_paise")
+  businessBasePaise    Int          @map("business_base_paise")
+  status               FlightStatus @default(DRAFT)
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  originAirport      Airport      @relation("OriginAirport", fields: [originAirportId], references: [id])
+  destinationAirport Airport      @relation("DestinationAirport", fields: [destinationAirportId], references: [id])
+  aircraftType       AircraftType @relation(fields: [aircraftTypeId], references: [id])
+  flightSeats        FlightSeat[]
+  seatLocks          SeatLock[]
+  bookings           Booking[]
+
+  @@index([originAirportId, destinationAirportId, departureTime, status])
+  @@map("flights")
+}
+
+model FlightSeat {
+  id           String     @id @default(uuid()) @db.Uuid
+  flightId     String     @map("flight_id") @db.Uuid
+  seatNumber   String     @map("seat_number") @db.VarChar(5)
+  rowNumber    Int        @map("row_number")
+  columnLetter String     @map("column_letter") @db.VarChar(2)
+  cabinClass   CabinClass @map("cabin_class")
+  farePaise    Int        @map("fare_paise")
+  status       SeatStatus @default(AVAILABLE)
+  isExitRow    Boolean    @default(false) @map("is_exit_row")
+  isWindow     Boolean    @default(false) @map("is_window")
+
+  flight            Flight             @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  seatLocks         SeatLock[]
+  bookingPassengers BookingPassenger[]
+  tickets           Ticket[]
+
+  @@unique([flightId, seatNumber])
+  @@index([flightId, status])
+  @@map("flight_seats")
+}
+
+// ============================================================================
+// 3. BOOKING & TICKET DOMAIN (4 Tables)
+// ============================================================================
+
+model SeatLock {
+  id          String         @id @default(uuid()) @db.Uuid
+  lockGroupId String         @map("lock_group_id") @db.Uuid
+  flightId    String         @map("flight_id") @db.Uuid
+  seatId      String         @map("seat_id") @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  status      SeatLockStatus @default(LOCKED)
+  expiresAt   DateTime       @map("expires_at") @db.Timestamptz(6)
+  releasedAt  DateTime?      @map("released_at") @db.Timestamptz(6)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  flight Flight     @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  seat   FlightSeat @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Partial unique index on (flight_id, seat_id) WHERE status = 'LOCKED' added in SQL migration (BR-03)
+  @@index([lockGroupId])
+  @@index([userId, status])
+  @@index([expiresAt, status])
+  @@map("seat_locks")
+}
+
+model Booking {
+  id               String        @id @default(uuid()) @db.Uuid
+  pnr              String        @unique @db.VarChar(6)
+  userId           String        @map("user_id") @db.Uuid
+  flightId         String        @map("flight_id") @db.Uuid
+  cabinClass       CabinClass    @map("cabin_class")
+  status           BookingStatus @default(PENDING)
+  totalAmountPaise Int           @map("total_amount_paise")
+  currency         String        @default("INR") @db.VarChar(3)
+  confirmedAt      DateTime?     @map("confirmed_at") @db.Timestamptz(6)
+  cancelledAt      DateTime?     @map("cancelled_at") @db.Timestamptz(6)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user           User               @relation(fields: [userId], references: [id])
+  flight         Flight             @relation(fields: [flightId], references: [id])
+  passengers     BookingPassenger[]
+  tickets        Ticket[]
+  paymentIntents PaymentIntent[]
+  refunds        Refund[]
+
+  @@index([userId, createdAt])
+  @@index([flightId, status])
+  @@map("bookings")
+}
+
+model BookingPassenger {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  bookingId             String                 @map("booking_id") @db.Uuid
+  flightId              String                 @map("flight_id") @db.Uuid
+  seatId                String                 @map("seat_id") @db.Uuid
+  status                BookingPassengerStatus @default(ACTIVE)
+  // AES-256-GCM encrypted PII columns (NFR-S-03)
+  fullNameEncrypted     String                 @map("full_name_encrypted")
+  age                   Int
+  gender                Gender
+  govtIdType            GovtIdType             @map("govt_id_type")
+  govtIdNumberEncrypted String                 @map("govt_id_number_encrypted")
+  govtIdLast4           String                 @map("govt_id_last4") @db.VarChar(4)
+  farePaise             Int                    @map("fare_paise")
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  booking Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seat    FlightSeat @relation(fields: [seatId], references: [id])
+  ticket  Ticket?
+
+  // Partial unique index on (flight_id, seat_id) WHERE status = 'ACTIVE' added in SQL migration (BR-01)
+  @@index([bookingId])
+  @@map("booking_passengers")
+}
+
+model Ticket {
+  id                 String       @id @default(uuid()) @db.Uuid
+  bookingId          String       @map("booking_id") @db.Uuid
+  bookingPassengerId String       @unique @map("booking_passenger_id") @db.Uuid
+  flightId           String       @map("flight_id") @db.Uuid
+  seatId             String       @map("seat_id") @db.Uuid
+  seatLabel          String       @map("seat_label") @db.VarChar(5)
+  // Format: v1:<payload_b64url>:<ed25519_sig_b64url> (FR-PAX-031)
+  qrToken            String       @map("qr_token")
+  nonce              String       @unique
+  status             TicketStatus @default(ACTIVE)
+  issuedAt           DateTime     @default(now()) @map("issued_at") @db.Timestamptz(6)
+  cancelledAt        DateTime?    @map("cancelled_at") @db.Timestamptz(6)
+
+  booking          Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingPassenger BookingPassenger @relation(fields: [bookingPassengerId], references: [id], onDelete: Cascade)
+  seat             FlightSeat       @relation(fields: [seatId], references: [id])
+
+  @@index([bookingId])
+  @@map("tickets")
+}
+
+// ============================================================================
+// 4. PAYMENT DOMAIN (3 Tables — Zero raw card/CVV/UPI PIN columns per BR-07)
+// ============================================================================
+
+model PaymentIntent {
+  id                String        @id @default(uuid()) @db.Uuid
+  bookingId         String        @map("booking_id") @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  razorpayOrderId   String        @unique @map("razorpay_order_id")
+  razorpayPaymentId String?       @unique @map("razorpay_payment_id")
+  amountPaise       Int           @map("amount_paise")
+  currency          String        @default("INR") @db.VarChar(3)
+  status            PaymentStatus @default(PENDING)
+  paymentMethod     String?       @map("payment_method")
+  failureReason     String?       @map("failure_reason")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  booking Booking  @relation(fields: [bookingId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  refunds Refund[]
+
+  @@index([bookingId])
+  @@map("payment_intents")
+}
+
+model WebhookEvent {
+  id          String             @id @default(uuid()) @db.Uuid
+  provider    String             @default("RAZORPAY") @db.VarChar(32)
+  eventId     String             @unique @map("event_id")
+  eventType   String             @map("event_type")
+  payload     Json
+  status      WebhookEventStatus @default(RECEIVED)
+  errorDetail String?            @map("error_detail")
+  processedAt DateTime?          @map("processed_at") @db.Timestamptz(6)
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("webhook_events")
+}
+
+model IdempotencyKey {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorId        String   @map("actor_id") @db.Uuid
+  idempotencyKey String   @map("idempotency_key") @db.VarChar(128)
+  endpoint       String
+  requestHash    String   @map("request_hash") @db.VarChar(64)
+  responseStatus Int      @map("response_status")
+  responseBody   Json     @map("response_body")
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@unique([actorId, idempotencyKey])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+// ============================================================================
+// 5. AUDIT & IMMUTABLE DOMAIN (2 Tables)
+// ============================================================================
+
+model Refund {
+  id                String       @id @default(uuid()) @db.Uuid
+  bookingId         String       @map("booking_id") @db.Uuid
+  paymentIntentId   String       @map("payment_intent_id") @db.Uuid
+  initiatedByUserId String       @map("initiated_by_user_id") @db.Uuid
+  approvedByAdminId String?      @map("approved_by_admin_id") @db.Uuid
+  amountPaise       Int          @map("amount_paise")
+  refundPercentage  Int          @map("refund_percentage")
+  status            RefundStatus @default(INITIATED)
+  reason            String
+  razorpayRefundId  String?      @unique @map("razorpay_refund_id")
+  retryCount        Int          @default(0) @map("retry_count")
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  booking       Booking       @relation(fields: [bookingId], references: [id])
+  paymentIntent PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  initiatedBy   User          @relation("RefundInitiator", fields: [initiatedByUserId], references: [id])
+  approvedBy    User?         @relation("RefundApprover", fields: [approvedByAdminId], references: [id])
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("refunds")
+}
+
+model AuditLog {
+  id         String         @id @default(uuid()) @db.Uuid
+  actorId    String?        @map("actor_id") @db.Uuid
+  actorRole  AuditActorRole @map("actor_role")
+  entityType String         @map("entity_type") @db.VarChar(64)
+  entityId   String         @map("entity_id") @db.VarChar(64)
+  action     String         @db.VarChar(64)
+  reason     String?
+  metadata   Json           @default("{}")
+  ipAddress  String?        @map("ip_address") @db.VarChar(64)
+  requestId  String?        @map("request_id") @db.VarChar(64)
+  // Protected by BEFORE UPDATE OR DELETE PostgreSQL trigger (NFR-S-07, FR-ADM-022)
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
