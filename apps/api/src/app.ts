@@ -12,6 +12,7 @@ import { globalErrorHandler } from './shared/errors/error-handler.js';
 import { persistIdempotencyResponse } from './shared/middleware/idempotency.middleware.js';
 import { redis, isRedisReady } from './shared/redis/client.js';
 import { auditRoutes } from './modules/audit/index.js';
+import { identityRoutes } from './modules/identity/index.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -23,7 +24,6 @@ export async function buildApp(): Promise<FastifyInstance> {
     trustProxy: true
   });
 
-  // Security headers (FR-XC-007, NFR-S-04, NFR-S-15)
   await app.register(helmet, {
     contentSecurityPolicy: {
       directives: {
@@ -51,7 +51,6 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
   });
 
-  // Auto-generated OpenAPI 3.1 Specification (NFR-M-04)
   await app.register(swagger, {
     openapi: {
       openapi: '3.1.0',
@@ -67,7 +66,6 @@ export async function buildApp(): Promise<FastifyInstance> {
     routePrefix: '/docs'
   });
 
-  // Attach correlation ID & persist idempotent responses
   app.addHook('onSend', async (request, reply, payload) => {
     void reply.header('X-Request-Id', request.id);
     return persistIdempotencyResponse(request, reply, payload);
@@ -75,7 +73,6 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   app.setErrorHandler(globalErrorHandler);
 
-  // Health Check Endpoint (FR-XC-008: responds < 1s)
   app.get(
     '/v1/health',
     {
@@ -118,6 +115,9 @@ export async function buildApp(): Promise<FastifyInstance> {
       });
     }
   );
+
+  // Module 1: Identity & Auth Routes
+  await app.register(identityRoutes, { prefix: '/v1' });
 
   // Module 8: Audit Routes
   await app.register(auditRoutes, { prefix: '/v1/admin' });
