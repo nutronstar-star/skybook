@@ -13,6 +13,7 @@ import { persistIdempotencyResponse } from './shared/middleware/idempotency.midd
 import { redis, isRedisReady } from './shared/redis/client.js';
 import { auditRoutes } from './modules/audit/index.js';
 import { identityRoutes } from './modules/identity/index.js';
+import { flightRoutes } from './modules/flight/index.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -118,6 +119,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Module 1: Identity & Auth Routes
   await app.register(identityRoutes, { prefix: '/v1' });
+
+  // Module 2: Flight Search & Admin Catalog Routes
+  await app.register(flightRoutes, { prefix: '/v1' });
 
   // Module 8: Audit Routes
   await app.register(auditRoutes, { prefix: '/v1/admin' });
