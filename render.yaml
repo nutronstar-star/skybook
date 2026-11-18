@@ -42,8 +42,8 @@ services:
         generateValue: true
       - key: RAZORPAY_WEBHOOK_SECRET
         value: skybook_prod_razorpay_webhook_secret_2026
-      - key: PII_ENCRYPTION_KEY_B64
-        sync: false
+      - key: PII_ENCRYPTION_KEY_HEX
+        generateValue: true
       - key: TICKET_ED25519_PRIVATE_KEY_B64
         sync: false
       - key: TICKET_ED25519_PUBLIC_KEY_B64
