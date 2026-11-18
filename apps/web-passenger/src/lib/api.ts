@@ -1,8 +1,18 @@
+const DEFAULT_API_URL =
+  process.env.NODE_ENV === 'production'
+    ? 'https://skybook-api-zde1.onrender.com'
+    : 'http://localhost:4000';
+
+const DEFAULT_WS_URL =
+  process.env.NODE_ENV === 'production'
+    ? 'wss://skybook-api-zde1.onrender.com/v1/ws/seats'
+    : 'ws://localhost:4000/v1/ws/seats';
+
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:4000';
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || DEFAULT_API_URL;
 
 export const WS_SEATS_URL =
-  process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000/v1/ws/seats';
+  process.env.NEXT_PUBLIC_WS_URL || DEFAULT_WS_URL;
 
 export interface ApiErrorShape {
   error?: {

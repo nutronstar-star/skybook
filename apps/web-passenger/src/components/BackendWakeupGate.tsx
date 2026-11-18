@@ -14,6 +14,7 @@ export function BackendWakeupGate({
   const [awake, setAwake] = useState<boolean>(false);
   const [fadingOut, setFadingOut] = useState<boolean>(false);
   const [elapsedSec, setElapsedSec] = useState<number>(0);
+  const [probeError, setProbeError] = useState<string | null>(null);
 
   const mountedRef = useRef(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,22 +34,23 @@ export function BackendWakeupGate({
       if (!mountedRef.current) return;
 
       if (res.ok) {
-        const data = (await res.json()) as { status?: string };
-        if (data.status === 'ok') {
-          window.sessionStorage.setItem(SESSION_AWAKE_KEY, '1');
-          if (!forceStayOpen) {
-            setFadingOut(true);
-            setTimeout(() => {
-              if (mountedRef.current) {
-                setAwake(true);
-              }
-            }, 350);
-          }
-          return;
+        setProbeError(null);
+        window.sessionStorage.setItem(SESSION_AWAKE_KEY, '1');
+        if (!forceStayOpen) {
+          setFadingOut(true);
+          setTimeout(() => {
+            if (mountedRef.current) {
+              setAwake(true);
+            }
+          }, 350);
         }
+        return;
       }
-    } catch {
+      setProbeError(`HTTP ${res.status} from ${API_BASE_URL}`);
+    } catch (err) {
       clearTimeout(abortTimeout);
+      const msg = err instanceof Error ? err.message : 'Network error';
+      setProbeError(`${msg} (${API_BASE_URL})`);
     }
 
     if (!mountedRef.current) return;
@@ -204,6 +206,11 @@ export function BackendWakeupGate({
           ? 'Waking up server...'
           : `Waking up server (${elapsedSec}s) · usually ready within 30s`}
       </p>
+      {elapsedSec >= 4 && probeError && (
+        <p className="mt-1 max-w-md px-4 text-center font-mono text-[11px] opacity-70" style={{ color: 'var(--text-muted)' }}>
+          {probeError}
+        </p>
+      )}
     </div>
   );
 }
