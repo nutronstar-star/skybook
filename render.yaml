@@ -31,7 +31,7 @@ services:
           name: skybook-redis
           property: connectionString
       - key: CORS_ORIGIN
-        value: http://localhost:3000,http://localhost:3001
+        value: https://skybook-eight-nu.vercel.app,https://skybook-web-admin.vercel.app
       - key: MOCK_OTP
         value: "true"
       - key: MOCK_PAYMENT

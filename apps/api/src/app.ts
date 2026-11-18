@@ -91,7 +91,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   await app.register(cors, {
-    origin: [env.PASSENGER_ORIGIN, env.ADMIN_ORIGIN],
+    origin: (origin, cb) => {
+      if (!origin || env.CORS_ORIGIN === '*') return cb(null, true);
+      const allowed = env.CORS_ORIGIN.split(',').map((s) => s.trim().replace(/\/$/, ''));
+      if (allowed.includes(origin) || origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app')) {
+        return cb(null, true);
+      }
+      return cb(null, false);
+    }, env.ADMIN_ORIGIN],
     credentials: true
   });
 
