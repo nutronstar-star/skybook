@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AdminAuthProvider } from '@/context/AdminAuthContext';
 import { AdminNavbar } from '@/components/AdminNavbar';
+import { BackendWakeupGate } from '@/components/BackendWakeupGate';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -39,19 +40,21 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <ThemeProvider>
           <AdminAuthProvider>
-            <div className="flex min-h-screen flex-col">
-              <AdminNavbar />
-              <main className="flex-1">{children}</main>
-              <footer
-                className="py-6 text-center font-mono text-xs"
-                style={{
-                  borderTop: '1px solid var(--border-hairline)',
-                  color: 'var(--text-muted)'
-                }}
-              >
-                SKYBOOK OPERATIONS &amp; COMPLIANCE CONSOLE · ISO/IEC 27001 AUDIT READY
-              </footer>
-            </div>
+            <BackendWakeupGate appName="OPERATIONS CONSOLE">
+              <div className="flex min-h-screen flex-col">
+                <AdminNavbar />
+                <main className="flex-1">{children}</main>
+                <footer
+                  className="py-6 text-center font-mono text-xs"
+                  style={{
+                    borderTop: '1px solid var(--border-hairline)',
+                    color: 'var(--text-muted)'
+                  }}
+                >
+                  SKYBOOK OPERATIONS &amp; COMPLIANCE CONSOLE · ISO/IEC 27001 AUDIT READY
+                </footer>
+              </div>
+            </BackendWakeupGate>
           </AdminAuthProvider>
         </ThemeProvider>
       </body>

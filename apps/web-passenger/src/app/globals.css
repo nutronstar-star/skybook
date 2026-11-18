@@ -244,3 +244,70 @@ body {
 }
 .sb-ticket-notch-left { left: -16px; }
 .sb-ticket-notch-right { right: -16px; }
+
+/* SkyBook Master Mark Loader Animations (brand_2.html) */
+@keyframes sbArcFlow {
+  to {
+    stroke-dashoffset: -72;
+  }
+}
+
+@keyframes sbTearFlow {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+@keyframes sbJetFloat {
+  0%, 100% {
+    transform: translate(755px, 345px) rotate(-32deg) translateX(0px);
+  }
+  50% {
+    transform: translate(755px, 345px) rotate(-32deg) translateX(18px);
+  }
+}
+
+@keyframes sbBeaconGlow {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.22);
+  }
+}
+
+@keyframes sbBarcodeScan {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.sb-loader-arc {
+  animation: sbArcFlow 1.8s linear infinite;
+}
+
+.sb-loader-tear {
+  animation: sbTearFlow 2.6s linear infinite;
+}
+
+.sb-loader-jet {
+  animation: sbJetFloat 2.8s ease-in-out infinite;
+}
+
+.sb-loader-beacon {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sbBeaconGlow 2s ease-in-out infinite;
+}
+
+.sb-loader-bar-1 { animation: sbBarcodeScan 1.8s ease-in-out infinite 0.0s; }
+.sb-loader-bar-2 { animation: sbBarcodeScan 1.8s ease-in-out infinite 0.2s; }
+.sb-loader-bar-3 { animation: sbBarcodeScan 1.8s ease-in-out infinite 0.4s; }
+.sb-loader-bar-4 { animation: sbBarcodeScan 1.8s ease-in-out infinite 0.6s; }
+.sb-loader-bar-5 { animation: sbBarcodeScan 1.8s ease-in-out infinite 0.8s; }
+.sb-loader-bar-6 { animation: sbBarcodeScan 1.8s ease-in-out infinite 1.0s; }

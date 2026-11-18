@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { OtpAuthModal } from '@/components/OtpAuthModal';
+import { BackendWakeupGate } from '@/components/BackendWakeupGate';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -41,20 +42,22 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <ThemeProvider>
           <AuthProvider>
-            <div className="flex min-h-screen flex-col">
-              <Navbar />
-              <main className="flex-1">{children}</main>
-              <footer
-                className="py-6 text-center font-mono text-xs"
-                style={{
-                  borderTop: '1px solid var(--border-hairline)',
-                  color: 'var(--text-muted)'
-                }}
-              >
-                SKYBOOK UNIFIED RESERVATION &amp; TELEMETRY ENGINE · DUAL-SPECTRUM UI
-              </footer>
-            </div>
-            <OtpAuthModal />
+            <BackendWakeupGate appName="PASSENGER PORTAL">
+              <div className="flex min-h-screen flex-col">
+                <Navbar />
+                <main className="flex-1">{children}</main>
+                <footer
+                  className="py-6 text-center font-mono text-xs"
+                  style={{
+                    borderTop: '1px solid var(--border-hairline)',
+                    color: 'var(--text-muted)'
+                  }}
+                >
+                  SKYBOOK UNIFIED RESERVATION &amp; TELEMETRY ENGINE · DUAL-SPECTRUM UI
+                </footer>
+              </div>
+              <OtpAuthModal />
+            </BackendWakeupGate>
           </AuthProvider>
         </ThemeProvider>
       </body>
