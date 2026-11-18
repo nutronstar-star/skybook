@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     const apiBase =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:4000';
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || (process.env.NODE_ENV === 'production' ? 'https://skybook-api-zde1.onrender.com' : 'http://localhost:4000');
     const webhookSecret =
       process.env.RAZORPAY_WEBHOOK_SECRET || 'skybook_dev_razorpay_webhook_secret_2026';
 
