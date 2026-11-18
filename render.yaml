@@ -30,6 +30,10 @@ services:
           type: keyvalue
           name: skybook-redis
           property: connectionString
+      - key: PASSENGER_ORIGIN
+        value: https://skybook-eight-nu.vercel.app
+      - key: ADMIN_ORIGIN
+        value: https://skybook-web-admin.vercel.app
       - key: CORS_ORIGIN
         value: https://skybook-eight-nu.vercel.app,https://skybook-web-admin.vercel.app
       - key: MOCK_OTP
