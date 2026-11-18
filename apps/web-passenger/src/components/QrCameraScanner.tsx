@@ -1,18 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-
-interface BarcodeDetection {
-  rawValue: string;
-}
-
-interface BarcodeDetectorInstance {
-  detect(source: ImageBitmapSource): Promise<BarcodeDetection[]>;
-}
-
-interface BarcodeDetectorConstructor {
-  new (options?: { formats?: string[] }): BarcodeDetectorInstance;
-}
+import jsQR from 'jsqr';
 
 export function QrCameraScanner({
   onScan
@@ -20,6 +9,7 @@ export function QrCameraScanner({
   onScan: (payload: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,37 +28,31 @@ export function QrCameraScanner({
 
   useEffect(() => {
     if (!scanning) return;
-
-    const Detector = (
-      window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }
-    ).BarcodeDetector;
-
-    if (!Detector) {
-      setError(
-        'Live QR detection requires Chrome, Edge, or Android WebView. Use manual paste below on this browser.'
-      );
-      stopCamera();
-      return;
-    }
-
-    const detector = new Detector({ formats: ['qr_code'] });
     let cancelled = false;
 
-    const interval = setInterval(async () => {
-      if (cancelled || !videoRef.current || videoRef.current.readyState < 2) {
-        return;
+    const interval = setInterval(() => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (cancelled || !video || !canvas || video.readyState < 2) return;
+
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (!w || !h) return;
+
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+
+      ctx.drawImage(video, 0, 0, w, h);
+      const img = ctx.getImageData(0, 0, w, h);
+      const hit = jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+
+      if (hit?.data?.trim() && !cancelled) {
+        onScan(hit.data.trim());
+        stopCamera();
       }
-      try {
-        const codes = await detector.detect(videoRef.current);
-        const match = codes.find((c) => c.rawValue?.trim());
-        if (match && !cancelled) {
-          onScan(match.rawValue.trim());
-          stopCamera();
-        }
-      } catch {
-        // Ignore transient frame read errors
-      }
-    }, 250);
+    }, 200);
 
     return () => {
       cancelled = true;
@@ -79,7 +63,7 @@ export function QrCameraScanner({
   const startCamera = async () => {
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Camera API unavailable in this browser context.');
+      setError('Camera API unavailable in this browser.');
       return;
     }
     try {
@@ -108,7 +92,7 @@ export function QrCameraScanner({
     <div className="mb-4 rounded-xl border border-slate-500/20 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-mono text-xs uppercase tracking-wider opacity-80">
-          Optical Gate Scanner (Webcam / Mobile)
+          Optical Gate Scanner (All Browsers)
         </span>
         {!scanning ? (
           <button
@@ -137,6 +121,7 @@ export function QrCameraScanner({
             muted
             className="mx-auto max-h-64 w-full object-cover"
           />
+          <canvas ref={canvasRef} className="hidden" />
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="h-40 w-40 rounded-xl border-2 border-sky-400/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
           </div>
