@@ -1,0 +1,50 @@
+databases:
+  - name: skybook-postgres
+    plan: free
+    databaseName: skybook
+    user: skybook
+
+services:
+  - type: keyvalue
+    name: skybook-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+  - type: web
+    name: skybook-api
+    runtime: node
+    plan: free
+    buildCommand: npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @skybook/shared build && pnpm --filter @skybook/database generate && pnpm --filter @skybook/database build && pnpm --filter @skybook/api build
+    startCommand: pnpm --filter @skybook/database exec prisma migrate deploy && pnpm --filter @skybook/database exec prisma db seed && pnpm --filter @skybook/api start
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: skybook-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: skybook-redis
+          property: connectionString
+      - key: CORS_ORIGIN
+        value: http://localhost:3000,http://localhost:3001
+      - key: MOCK_OTP
+        value: "true"
+      - key: MOCK_PAYMENT
+        value: "true"
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: RAZORPAY_WEBHOOK_SECRET
+        value: skybook_prod_razorpay_webhook_secret_2026
+      - key: PII_ENCRYPTION_KEY_B64
+        sync: false
+      - key: TICKET_ED25519_PRIVATE_KEY_B64
+        sync: false
+      - key: TICKET_ED25519_PUBLIC_KEY_B64
+        sync: false

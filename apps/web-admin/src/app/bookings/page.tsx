@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldAlert, Eye, FileSpreadsheet, X, Lock } from 'lucide-react';
-import { apiFetch, ApiClientError, formatInr, type MaskedBookingRow } from '@/lib/api';
+import { API_BASE_URL, apiFetch, ApiClientError, formatInr, type MaskedBookingRow } from '@/lib/api';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 
 export default function AdminBookingsPage() {
@@ -72,7 +72,7 @@ export default function AdminBookingsPage() {
   const handleExportCsv = async () => {
     if (!accessToken) return;
     try {
-      const res = await fetch('http://localhost:4000/v1/admin/bookings/export.csv', {
+      const res = await fetch(`${API_BASE_URL}/v1/admin/bookings/export.csv`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       const blob = await res.blob();

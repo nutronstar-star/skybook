@@ -1,0 +1,7 @@
+[build]
+  base = "apps/web-admin"
+  command = "pnpm --filter @skybook/shared build && pnpm --filter @skybook/web-admin build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
