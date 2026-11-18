@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { QrCameraScanner } from '@/components/QrCameraScanner';
 import { ShieldCheck, CheckCircle2, AlertTriangle, Key } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
@@ -102,7 +103,8 @@ export default function GateQrVerifierPage() {
         >
           Paste Signed QR Payload (`v1:...`)
         </label>
-        <textarea
+        <QrCameraScanner onScan={(decoded) => setQrToken(decoded)} />
+          <textarea
           rows={4}
           required
           value={qrToken}
