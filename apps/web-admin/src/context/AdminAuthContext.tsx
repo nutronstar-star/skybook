@@ -30,6 +30,15 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    const onRefreshed = (e: Event) => {
+      const detail = (e as CustomEvent<{ accessToken?: string; refreshToken?: string }>).detail;
+      if (detail?.accessToken) setAccessToken(detail.accessToken);
+    };
+    window.addEventListener('skybook-admin-token-refreshed', onRefreshed);
+    return () => window.removeEventListener('skybook-admin-token-refreshed', onRefreshed);
+  }, []);
+
+  useEffect(() => {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {

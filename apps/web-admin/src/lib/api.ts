@@ -17,6 +17,90 @@ export class ApiClientError extends Error {
   }
 }
 
+async function tryRefreshAdminToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    let refreshToken: string | null = null;
+    let storageKey: string | null = null;
+    let parsedObj: Record<string, unknown> | null = null;
+
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k) continue;
+      const raw = window.localStorage.getItem(k);
+      if (!raw) continue;
+      if (k.toLowerCase().includes('refresh') && raw.length > 20 && !raw.startsWith('{')) {
+        refreshToken = raw;
+        storageKey = k;
+        break;
+      }
+      if (raw.startsWith('{') && raw.includes('refreshToken')) {
+        const obj = JSON.parse(raw) as Record<string, unknown>;
+        if (typeof obj.refreshToken === 'string') {
+          refreshToken = obj.refreshToken;
+          storageKey = k;
+          parsedObj = obj;
+          break;
+        }
+      }
+    }
+
+    if (!refreshToken) return null;
+
+    const refreshRes = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+
+    if (!refreshRes.ok) return null;
+
+    const tokens = (await refreshRes.json()) as {
+      accessToken?: string;
+      refreshToken?: string;
+    };
+    if (!tokens.accessToken) return null;
+
+    if (parsedObj && storageKey) {
+      parsedObj.accessToken = tokens.accessToken;
+      if (tokens.refreshToken) parsedObj.refreshToken = tokens.refreshToken;
+      window.localStorage.setItem(storageKey, JSON.stringify(parsedObj));
+    } else {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (k && k.toLowerCase().includes('access')) {
+          window.localStorage.setItem(k, tokens.accessToken);
+        }
+        if (k && k.toLowerCase().includes('refresh') && tokens.refreshToken) {
+          window.localStorage.setItem(k, tokens.refreshToken);
+        }
+      }
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('skybook-admin-token-refreshed', { detail: tokens })
+    );
+    return tokens.accessToken;
+  } catch {
+    return null;
+  }
+}
+
+function clearExpiredAdminSession() {
+  if (typeof window === 'undefined') return;
+  const toRemove: string[] = [];
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const k = window.localStorage.key(i);
+    if (k && (k.toLowerCase().includes('skybook') || k.toLowerCase().includes('admin') || k.toLowerCase().includes('token'))) {
+      toRemove.push(k);
+    }
+  }
+  toRemove.forEach((k) => window.localStorage.removeItem(k));
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login';
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit & { token?: string | null } = {}
@@ -31,10 +115,28 @@ export async function apiFetch<T>(
     mergedHeaders.set('Authorization', `Bearer ${token}`);
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  let res = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
     headers: mergedHeaders
   });
+
+  if (
+    res.status === 401 &&
+    token &&
+    !path.includes('/auth/admin/login') &&
+    !path.includes('/auth/refresh')
+  ) {
+    const freshToken = await tryRefreshAdminToken();
+    if (freshToken) {
+      mergedHeaders.set('Authorization', `Bearer ${freshToken}`);
+      res = await fetch(`${API_BASE_URL}${path}`, {
+        ...rest,
+        headers: mergedHeaders
+      });
+    } else {
+      clearExpiredAdminSession();
+    }
+  }
 
   const text = await res.text();
   let json: unknown = {};

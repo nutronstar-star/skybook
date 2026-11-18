@@ -25,6 +25,7 @@ interface BoardingPassModalProps {
 }
 
 export function BoardingPassModal({ data, onClose }: BoardingPassModalProps) {
+  const [maximizedQr, setMaximizedQr] = useState<{ value: string; label?: string } | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [scannerBoost, setScannerBoost] = useState(false);
@@ -87,7 +88,8 @@ export function BoardingPassModal({ data, onClose }: BoardingPassModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
       <div className="relative w-full max-w-lg">
         {/* Top Controls: Gate Scanner Optical Boost + Close */}
         <div className="mb-3 flex items-center justify-between">
@@ -327,11 +329,26 @@ export function BoardingPassModal({ data, onClose }: BoardingPassModalProps) {
             {/* 12px Quiet-Zone Pure White Island for Optical Turnstile Scanners */}
             <div className="shrink-0 rounded-2xl bg-white p-3 shadow-md">
               {qrDataUrl ? (
-                <img
+                <button
+            type="button"
+            onClick={() =>
+              setMaximizedQr({
+                value: qrDataUrl,
+                label: data?.pnr ? `PNR ${data.pnr} · ${data.flight.origin.iataCode} → ${data.flight.destination.iataCode}` : undefined
+              })
+            }
+            title="Tap to maximize QR code"
+            className="group flex flex-col items-center rounded-xl bg-white p-2 transition-transform hover:scale-[1.03] focus:outline-none"
+          >
+            <img
                   src={qrDataUrl}
                   alt={`Boarding Pass QR for ${activeTicket.passengerName}`}
                   className="h-28 w-28"
                 />
+            <span className="mt-1 font-mono text-[9px] font-bold uppercase tracking-wider text-slate-500 group-hover:text-sky-600">
+              Tap to Maximize
+            </span>
+          </button>
               ) : (
                 <div className="h-28 w-28 animate-pulse rounded bg-slate-200" />
               )}
@@ -340,5 +357,43 @@ export function BoardingPassModal({ data, onClose }: BoardingPassModalProps) {
         </div>
       </div>
     </div>
+
+      {maximizedQr && (
+        <div
+          onClick={() => setMaximizedQr(null)}
+          className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-black/90 p-6 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Maximized Boarding Pass QR Code"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex w-full max-w-sm flex-col items-center rounded-3xl bg-white p-7 text-slate-950 shadow-2xl"
+          >
+            <div className="mb-1 font-mono text-[11px] font-extrabold uppercase tracking-widest text-sky-600">
+              GATE OPTICAL BOOST
+            </div>
+            {maximizedQr.label && (
+              <div className="text-center text-base font-extrabold text-slate-900">
+                {maximizedQr.label}
+              </div>
+            )}
+            <div className="my-5 rounded-2xl border-2 border-slate-200 bg-white p-4">
+              <img src={maximizedQr.value} alt="Maximized Boarding Pass QR" className="h-64 w-64 object-contain" />
+            </div>
+            <p className="text-center font-mono text-[11px] text-slate-500">
+              Hold steady 10–15 cm from optical gate scanner
+            </p>
+            <button
+              type="button"
+              onClick={() => setMaximizedQr(null)}
+              className="mt-5 w-full rounded-xl bg-slate-900 py-3 text-xs font-extrabold text-white transition hover:bg-slate-800"
+            >
+              Close Full-Screen QR
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
