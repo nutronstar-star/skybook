@@ -43,6 +43,8 @@ services:
       - key: RAZORPAY_WEBHOOK_SECRET
         value: skybook_prod_razorpay_webhook_secret_2026
       - key: PII_ENCRYPTION_KEY_HEX
+        sync: false
+      - key: COOKIE_SECRET
         generateValue: true
       - key: TICKET_ED25519_PRIVATE_KEY_B64
         sync: false
